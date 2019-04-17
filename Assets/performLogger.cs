@@ -47,6 +47,7 @@ namespace PupilLabs
 
         float plConfidence;
         float plTimeStamp;
+        float uTimeStamp;
 
         string mode;
 
@@ -68,6 +69,11 @@ namespace PupilLabs
             gazeListener.OnReceive3dGaze += ReceiveGaze;
         }
 
+        void Update()
+        {
+            uTimeStamp = Time.realtimeSinceStartup;
+
+        }
 
         void WriteHeader()
         {
@@ -78,7 +84,8 @@ namespace PupilLabs
             //add column names
             stringBuilder.Append(
                 "FrameNumber\t"
-                + "uTime\t"
+                + "uTimestamp\t"
+                + "logTimestamp\t"
                 + "cameraPos_X\t"
                 + "cameraPos_Y\t"
                 + "cameraPos_Z\t"
@@ -237,8 +244,8 @@ namespace PupilLabs
             stringBuilder.Append(
 
                         Time.frameCount + "\t"
+                        + uTimeStamp + "\t"
                         + Time.realtimeSinceStartup + "\t"
-
                         + cameraTransform.position.x.ToString() + "\t"
                         + cameraTransform.position.y.ToString() + "\t"
                         + cameraTransform.position.z.ToString() + "\t"
