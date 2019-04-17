@@ -297,7 +297,7 @@ namespace PupilLabs
                         + plEyeCenter1_xyz.y.ToString() + "\t"
                         + plEyeCenter1_xyz.z.ToString() + "\t"
 
-                        + mode + "\t"
+                        + mode
 
                         + Environment.NewLine
                     );
