@@ -12,16 +12,28 @@ namespace PupilLabs
         [SerializeField]
         private Request request = new Request();
 
-        public bool IsConnected
-        {
-            get { return request.IsConnected; }
-        }
 
         public delegate void ConnectionDelegate();
         public event ConnectionDelegate OnConnected;
         public event ConnectionDelegate OnDisconnecting;
 
-        // [SerializeField]
+        public bool IsConnected
+        {
+            get { return request.IsConnected; }
+        }
+
+        public string IP
+        {
+            get { return request.IP; }
+            set { request.IP = value; }
+        }
+
+        public int PORT 
+        {
+            get { return request.PORT; }
+            set { request.PORT = value; }
+        }
+
         private string PupilVersion;
 
         public string GetConnectionString()
@@ -61,26 +73,39 @@ namespace PupilLabs
 
                 if (!IsConnected)
                 {
+                    request.TerminateContext();
+
                     if (retry)
                     {
-                        Debug.Log("Could not connect, Re-trying in 5 seconds ! ");
+                        Debug.LogWarning("Could not connect, Re-trying in 5 seconds! ");
                         yield return new WaitForSeconds(retryDelay);
-
                     }
                     else
                     {
-                        request.TerminateContext();
+                        Debug.LogWarning("Could not connect! ");
                         yield return null;
                     }
                 }
             }
+
+            Connected();
+            
+            yield break;
+        }
+
+        private void Connected()
+        {
             Debug.Log(" Succesfully connected to Pupil! ");
+
+            SetPupilTimestamp(Time.realtimeSinceStartup);
             UpdatePupilVersion();
+
+            StartEyeProcesses();
+            SetDetectionMode("3d");
 
             // RepaintGUI(); //
             if (OnConnected != null)
                 OnConnected();
-            yield break;
         }
 
         public void Disconnect()
@@ -98,6 +123,25 @@ namespace PupilLabs
             return request.SendRequestMessage(dictionary);
         }
 
+        public bool StartEyeProcesses()
+        {
+            var startLeftEye = new Dictionary<string, object> {
+                {"subject", "eye_process.should_start.1"},
+                {"eye_id", 1},
+                {"delay", 0.1f}
+            };
+            var startRightEye = new Dictionary<string, object> {
+                {"subject", "eye_process.should_start.0"},
+                { "eye_id", 0},
+                { "delay", 0.2f}
+            };
+
+            bool leftEyeRunning = Send(startLeftEye);
+            bool rightEyeRunning = Send(startRightEye);
+
+            return leftEyeRunning && rightEyeRunning;
+        }
+
         public void StartPlugin(string name, Dictionary<string, object> args = null)
         {
             Dictionary<string, object> startPluginDic = new Dictionary<string, object> {
@@ -110,23 +154,40 @@ namespace PupilLabs
                 startPluginDic["args"] = args;
             }
 
-            request.SendRequestMessage(startPluginDic);
+            Send(startPluginDic);
         }
 
         public void StopPlugin(string name)
         {
-            request.SendRequestMessage(new Dictionary<string, object> {
+            Send(new Dictionary<string, object> {
                 { "subject","stop_plugin" },
                 { "name", name }
             });
+        }
+
+        public bool SetDetectionMode(string mode)
+        {
+            return Send(new Dictionary<string, object> { { "subject", "set_detection_mapping_mode" }, { "mode", mode } });
         }
 
         public void SetPupilTimestamp(float time)
         {
             string response;
             string command = "T " + time.ToString("0.000000", System.Globalization.CultureInfo.InvariantCulture);
-            Debug.Log($"Sync Time Command: {command}");
             request.SendCommand(command, out response);
+        }
+
+        public string GetPupilTimestamp()
+        {
+            string response;
+            bool success = request.SendCommand("t", out response);
+
+            if (!success)
+            {
+                Debug.LogWarning("GetPupilTimestamp: not connected!");
+            }
+
+            return response;
         }
 
         public string GetPupilVersion()
@@ -146,6 +207,20 @@ namespace PupilLabs
         public void ResetDefaultLocalConnection()
         {
             request.resetDefaultLocalConnection();
+        }
+
+        [ContextMenu("Check Time Sync")]
+        public void CheckTimeSync()
+        {
+            if (IsConnected)
+            {
+                Debug.Log($"Unity time: {Time.realtimeSinceStartup}");
+                Debug.Log($"Pupil Time: {GetPupilTimestamp()}");
+            }
+            else
+            {
+                Debug.LogWarning("CheckTimeSync: not connected");
+            }
         }
     }
 }

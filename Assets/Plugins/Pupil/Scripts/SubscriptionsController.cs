@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace PupilLabs
@@ -53,7 +54,7 @@ namespace PupilLabs
                 Subscription subscription = new Subscription(connectionStr, topic);
 
                 subscriptions.Add(topic, subscription);
-                // subscriptions[topic].OnReceiveData += Logging; //TODO would keep the socket open forever
+                // subscriptions[topic].OnReceiveData += Logging; 
             }
 
             subscriptions[topic].OnReceiveData += subscriberHandler;
@@ -84,7 +85,7 @@ namespace PupilLabs
         {
 
             List<string> toBeRemoved = new List<string>();
-            foreach (var subscription in subscriptions.Values)
+            foreach (var subscription in subscriptions.Values.ToList())
             {
                 if (!subscription.ShouldClose)
                 {
